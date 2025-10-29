@@ -39,12 +39,9 @@ if uploaded_file:
     vectorstore = FAISS.from_documents(splits, embedding=embeddings)
     retriever = vectorstore.as_retriever()
 
- from langchain_huggingface import HuggingFaceEndpoint
-llm = HuggingFaceEndpoint(
-    repo_id="mistralai/Mixtral-8x7B-Instruct-v0.1",  # example model
-    task="text-generation",
-    huggingfacehub_api_token=st.secrets["HF_TOKEN"]  # add your token in Streamlit secrets
-)
+     llm = OllamaLLM(model="gemma3:1b")
+      # add your token in Streamlit secrets
+    )
 
     # --- Define prompt and RAG chain ---
     prompt = ChatPromptTemplate.from_template("""
