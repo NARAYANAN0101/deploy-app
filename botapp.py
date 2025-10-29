@@ -39,9 +39,8 @@ if uploaded_file:
     vectorstore = FAISS.from_documents(splits, embedding=embeddings)
     retriever = vectorstore.as_retriever()
 
-     llm = OllamaLLM(model="gemma3:1b")
-      # add your token in Streamlit secrets
-    )
+    # --- Load local Ollama model ---
+    llm = OllamaLLM(model="gemma3:1b")  # Ensure this model is installed via Ollama
 
     # --- Define prompt and RAG chain ---
     prompt = ChatPromptTemplate.from_template("""
@@ -77,4 +76,3 @@ if uploaded_file:
 else:
     st.info("Please upload a PDF file to start.")
     
-
