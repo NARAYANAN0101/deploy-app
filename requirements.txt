@@ -5,3 +5,4 @@ langchain-huggingface
 langchain-ollama
 faiss-cpu
 sentence-transformers
+pypdf
