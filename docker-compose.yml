@@ -1,0 +1,10 @@
+version: "3.8"
+services:
+  app:
+    build: .
+    ports:
+      - "8501:8501"
+    environment:
+      - USE_DEEPFACE=0
+    restart: unless-stopped
+    shm_size: "1gb"
