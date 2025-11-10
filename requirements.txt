@@ -1,0 +1,9 @@
+streamlit>=1.20
+streamlit-webrtc
+opencv-python-headless
+numpy
+deepface    # optional heavy; you can remove for lightweight deployment
+av
+pillow
+torch       # only if you plan to use torch models; optional
+transformers
