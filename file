@@ -1,1 +1,97 @@
+# app.py
+import os
+import uvicorn
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+import faiss
+import numpy as np
+import threading
+import logging
+
+# -------- CONFIG --------
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
+FAISS_INDEX_PATH = os.getenv("FAISS_INDEX_PATH", "faiss.index")
+EMBED_DIM = int(os.getenv("EMBED_DIM", "1536"))
+# ------------------------
+
+app = FastAPI()
+logger = logging.getLogger("rag")
+logger.setLevel(logging.INFO)
+
+_index_lock = threading.Lock()
+_faiss_index = None
+
+# ---- Data Models ----
+class QueryRequest(BaseModel):
+    query: str
+    top_k: int = 5
+
+class AddDocRequest(BaseModel):
+    id: str
+    text: str
+
+
+# ---- Placeholder functions (you’ll replace these) ----
+def embed_text(text: str) -> np.ndarray:
+    """
+    TODO: Replace with your actual embedding function.
+    Should return a 1D numpy array (float32) of size EMBED_DIM.
+    """
+    return np.random.rand(EMBED_DIM).astype("float32")
+
+def call_ollama_generate(prompt: str) -> str:
+    """
+    TODO: Replace with your call to Ollama (HTTP or subprocess).
+    """
+    return "LLM response for prompt: " + prompt
+# -------------------------------------------------------
+
+
+def load_index():
+    global _faiss_index
+    with _index_lock:
+        if _faiss_index is None:
+            try:
+                _faiss_index = faiss.read_index(FAISS_INDEX_PATH)
+                logger.info("Loaded FAISS index from %s", FAISS_INDEX_PATH)
+            except Exception:
+                logger.info("Creating new FAISS index")
+                _faiss_index = faiss.IndexFlatIP(EMBED_DIM)
+    return _faiss_index
+
+
+@app.on_event("startup")
+def startup():
+    load_index()
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+@app.post("/add_doc")
+def add_doc(req: AddDocRequest):
+    idx = load_index()
+    vec = embed_text(req.text)
+    with _index_lock:
+        idx.add(np.expand_dims(vec, axis=0))
+        faiss.write_index(idx, FAISS_INDEX_PATH)
+    return {"status": "added"}
+
+
+@app.post("/query")
+def query(req: QueryRequest):
+    idx = load_index()
+    qvec = embed_text(req.query)
+    q = np.expand_dims(qvec, axis=0).astype("float32")
+    D, I = idx.search(q, req.top_k)
+    retrieved_texts = [f"doc_id:{int(i)} score:{float(d)}" for i, d in zip(I[0].tolist(), D[0].tolist())]
+    prompt = "Context:\n" + "\n".join(retrieved_texts) + "\n\nQuestion:\n" + req.query
+    answer = call_ollama_generate(prompt)
+    return {"answer": answer, "retrieved": retrieved_texts}
+
+
+if __name__ == "__main__":
+    uvicorn.run("app:app", host="0.0.0.0", port=int(os.getenv("PORT", "8000")), reload=False)
 
